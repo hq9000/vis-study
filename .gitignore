@@ -1,0 +1,4 @@
+venv
+generated_data/*
+!generated_data/.gitkeep
+.idea
