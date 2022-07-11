@@ -7,14 +7,14 @@
 <script type="text/javascript">
     var view;
 
-    fetch('http://127.0.0.1:5000/bars')
+    fetch('specs/{{ request.experiment_name }}.json' )
         .then(res => res.json())
         .then(spec => render(spec))
         .catch(err => console.error(err));
 
     function render(spec) {
         view = new vega.View(vega.parse(spec), {
-            renderer: 'canvas',  // renderer (canvas or svg)
+            renderer: '{{ request.renderer.value }}',  // renderer (canvas or svg)
             container: '#view',   // parent DOM container
             hover: true       // enable hover processing
         });
