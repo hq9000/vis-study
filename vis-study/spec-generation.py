@@ -45,7 +45,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
     """
 
     data_name = "table"
-    xscale_name = "scale"
+    xscale_name = "xscale"
     yscale_name = "yscale"
 
     res: Dict = {
@@ -53,14 +53,22 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
         "width": request.width,
         "height": request.height,
         "padding": 5,
-        "data": {
+        "data": [{
             "name": data_name,
-            "url": (DATA_DIR_NAME + '/'
-                    + request.experiment_name
-                    + '.'
-                    + request.data_format.value),
-            "format": request.data_format.value
-        },
+            "values": [
+                {"x": 0.05, "y": 0.09, "c": 0.98},
+                {"x": 0.04, "y": 0.12, "c": 0.23},
+                {"x": 0.01, "y": 0.01, "c": 0.23}
+            ]
+        }
+
+            # {
+            #     "name": "airports",
+            #     "url": "data/airports.csv",
+            #     "format": {"type": "csv", "parse": "auto"}
+            # }
+
+        ],
         "scales": [
             {
                 "name": xscale_name,
@@ -68,7 +76,6 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                 "domain": {"data": data_name, "field": FIELD_X_NAME},
                 "range": "width",
                 "padding": 0.05,
-                "round": False
             },
             {
                 "name": yscale_name,
@@ -79,27 +86,26 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
             }
         ],
         "axes": [
-            {"orient": "bottom", "scale": xscale_name},
-            {"orient": "left", "scale": yscale_name}
+            {"orient": "bottom", "scale": xscale_name, "grid": True},
+            {"orient": "left", "scale": yscale_name, "grid": True}
         ],
         "marks": [
             {
-                "type": "rect",
+                "name": "marks",
+                "type": "symbol",
                 "from": {"data": data_name},
                 "encode": {
-                    "enter": {
-                        "x": {"scale": xscale_name, "field": FIELD_X_NAME},
-                        "width": {"scale": xscale_name, "band": 1},
-                        "y": {"scale": yscale_name, "field": FIELD_Y_NAME},
-                        "y2": {"scale": FIELD_Y_NAME, "value": 0}
-                    },
                     "update": {
-                        "fill": {"value": "steelblue"}
-                    },
-                    "hover": {
-                        "fill": {"value": "red"}
+                        "x": {"scale": xscale_name, "field": FIELD_X_NAME},
+                        "y": {"scale": yscale_name, "field": FIELD_Y_NAME},
+
+                        "shape": {"value": "circle"},
+                        "strokeWidth": {"value": 2},
+                        "opacity": {"value": 0.5},
+                        "stroke": {"value": "#4682b4"},
+                        "fill": {"value": "transparent"}
                     }
-                }
+                },
             }
         ]
     }
