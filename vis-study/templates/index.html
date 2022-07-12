@@ -7,7 +7,7 @@
 <script type="text/javascript">
     var view;
 
-    fetch('specs/{{ request.experiment_name }}.json' )
+    fetch('{{ path_to_spec }}' )
         .then(res => res.json())
         .then(spec => render(spec))
         .catch(err => console.error(err));
