@@ -104,6 +104,18 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                     }
                 },
             }
+        ],
+        "legends": [
+            {
+                "fill": color_scale_name,
+                "title": FIELD_CATEGORY_NAME,
+                "type": "symbol",
+                "format": "s",
+                "symbolStrokeColor": "#4682b4",
+                "symbolStrokeWidth": 2,
+                "symbolOpacity": 0.5,
+                "symbolType": "circle"
+            }
         ]
     }
 
@@ -122,7 +134,7 @@ def generate_data(request: GenerationRequest) -> None:
     # noinspection PyUnusedLocal
     def generate_one_row(request: GenerationRequest, i: int) -> Dict:
 
-        category = 'category_' + str(random.randint(0, request.num_categories))
+        category = 'category_' + str(random.randint(0, request.num_categories - 1))
 
         res = {FIELD_CATEGORY_NAME: category,
                FIELD_X_NAME: random.uniform(0, 1),
@@ -206,7 +218,7 @@ if __name__ == "__main__":
     request = GenerationRequest(
         experiment_name="exp1",
         num_points=100,
-        num_categories=4,
+        num_categories=14,
         width=500,
         height=500,
         data_format=DataFormat.JSON,
