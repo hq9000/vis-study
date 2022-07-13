@@ -48,6 +48,8 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
     x_scale_name = "xscale"
     y_scale_name = "yscale"
     color_scale_name = "color"
+    tooltip_signal_name = "tooltip"
+
 
     res: Dict = {
         "$schema": "https://vega.github.io/schema/vega/v5.json",
@@ -86,6 +88,16 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
             {"orient": "bottom", "scale": x_scale_name, "grid": True},
             {"orient": "left", "scale": y_scale_name, "grid": True}
         ],
+        "signals": [
+            {
+                "name": tooltip_signal_name,
+                "value": {},
+                "on": [
+                    {"events": "symbol:mouseover", "update": "datum"},
+                    {"events": "symbol:mouseout", "update": "{}"}
+                ]
+            }
+        ],
         "marks": [
             {
                 "name": "marks",
@@ -103,6 +115,25 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                         "fill": {"value": "transparent"}
                     }
                 },
+            },
+            {
+                "type": "text",
+                "encode": {
+                    "enter": {
+                        "align": {"value": "center"},
+                        "baseline": {"value": "bottom"},
+                        "fill": {"value": "#333"}
+                    },
+                    "update": {
+                        "x": {"scale": x_scale_name, "signal": tooltip_signal_name + "." + FIELD_X_NAME, "band": 0.5},
+                        "y": {"scale": y_scale_name, "signal": tooltip_signal_name + "." + FIELD_Y_NAME, "offset": -2},
+                        "text": {"signal": tooltip_signal_name + "." + FIELD_CATEGORY_NAME},
+                        "fillOpacity": [
+                            {"test": f"isNaN({tooltip_signal_name + '.' + FIELD_X_NAME})", "value": 1},
+                            {"value": 1}
+                        ]
+                    }
+                }
             }
         ],
         "legends": [
