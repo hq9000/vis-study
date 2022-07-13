@@ -49,7 +49,15 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
     y_scale_name = "yscale"
     color_scale_name = "color"
     tooltip_signal_name = "tooltip"
+    tooltip_derived_text_field_name = "tooltip_text"
 
+    def generate_tooltip_text_expression(request: GenerationRequest) -> str:
+        # return " + ".join(['datum.attr_' + str(i) for i in range(request.num_attributes)])
+        res = "'data: '"
+        for i in range(request.num_attributes):
+            res += " + ' ' + datum.attr_" + str(i)
+
+        return res
 
     res: Dict = {
         "$schema": "https://vega.github.io/schema/vega/v5.json",
@@ -59,7 +67,14 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
         "data": [{
             "name": data_name,
             "url": generate_relative_path_to_data(request),
-            "format": {"type": request.data_format.value, "parse": "auto"}
+            "format": {"type": request.data_format.value, "parse": "auto"},
+            "transform": [
+                {
+                    "type": "formula",
+                    "expr": generate_tooltip_text_expression(request),
+                    "as": tooltip_derived_text_field_name
+                }
+            ]
         }
         ],
         "scales": [
@@ -127,7 +142,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                     "update": {
                         "x": {"scale": x_scale_name, "signal": tooltip_signal_name + "." + FIELD_X_NAME, "band": 0.5},
                         "y": {"scale": y_scale_name, "signal": tooltip_signal_name + "." + FIELD_Y_NAME, "offset": -2},
-                        "text": {"signal": tooltip_signal_name + "." + FIELD_CATEGORY_NAME},
+                        "text": {"signal": tooltip_signal_name + "." + tooltip_derived_text_field_name},
                         "fillOpacity": [
                             {"test": f"isNaN({tooltip_signal_name + '.' + FIELD_X_NAME})", "value": 1},
                             {"value": 1}
