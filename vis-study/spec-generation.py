@@ -156,7 +156,6 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                 "fill": color_scale_name,
                 "title": FIELD_CATEGORY_NAME,
                 "type": "symbol",
-                "format": "s",
                 "symbolStrokeColor": "#4682b4",
                 "symbolStrokeWidth": 2,
                 "symbolOpacity": 0.5,
