@@ -50,6 +50,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
     x_scale_name = "xscale"
     y_scale_name = "yscale"
     color_scale_name = "color"
+    size_scale_name = "size"
 
     tooltip_signal_name = "tooltip"
     clicked_signal_name = "clicked"
@@ -57,6 +58,8 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
     shift_signal_name = "shift"
 
     tooltip_derived_text_field_name = "tooltip_text"
+
+    size_attribute_name = 'attr_0'
 
     def generate_tooltip_text_expression(request: GenerationRequest) -> str:
         # return " + ".join(['datum.attr_' + str(i) for i in range(request.num_attributes)])
@@ -113,6 +116,12 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                 "type": "ordinal",
                 "range": {"scheme": "category10"},
                 "domain": {"data": source_data_name, "field": FIELD_CATEGORY_NAME}
+            },
+            {
+                "name": size_scale_name,
+                "domain": {"data": source_data_name, "field": size_attribute_name},
+                "zero": False,
+                "range": [10, 1000]
             }
         ],
         "axes": [
@@ -158,7 +167,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                     "update": {
                         "x": {"scale": x_scale_name, "field": FIELD_X_NAME},
                         "y": {"scale": y_scale_name, "field": FIELD_Y_NAME},
-
+                        "size": {"scale": size_scale_name, "field": size_attribute_name},
                         "shape": {"value": "circle"},
                         "strokeWidth": {"value": 2},
                         "opacity": [

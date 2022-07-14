@@ -1,2 +1,1 @@
-- make interactive legend
 - circles with varying radius (attr_0)
