@@ -64,18 +64,26 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
         "width": request.width,
         "height": request.height,
         "padding": 5,
-        "data": [{
-            "name": data_name,
-            "url": generate_relative_path_to_data(request),
-            "format": {"type": request.data_format.value, "parse": "auto"},
-            "transform": [
-                {
-                    "type": "formula",
-                    "expr": generate_tooltip_text_expression(request),
-                    "as": tooltip_derived_text_field_name
-                }
-            ]
-        }
+        "data": [
+            {
+                "name": data_name,
+                "url": generate_relative_path_to_data(request),
+                "format": {"type": request.data_format.value, "parse": "auto"},
+                "transform": [
+                    {
+                        "type": "formula",
+                        "expr": generate_tooltip_text_expression(request),
+                        "as": tooltip_derived_text_field_name
+                    }
+                ]
+            },
+            {
+                "name": "selected",
+                "on": [
+                    {"trigger": "!shift && clicked", "insert": "clicked"},
+                    {"trigger": "shift && clicked", "toggle": "clicked"}
+                ]
+            }
         ],
         "scales": [
             {
@@ -108,10 +116,30 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                 "name": tooltip_signal_name,
                 "value": {},
                 "on": [
-                    {"events": "symbol:mouseover", "update": "datum"},
+                    {"events": "symbol:mous eover", "update": "datum"},
                     {"events": "symbol:mouseout", "update": "{}"}
                 ]
-            }
+            },
+            {
+                "name": "shift", "value": False,
+                "on": [
+                    {
+                        "events": "@legendSymbol:click, @legendLabel:click",
+                        "update": "event.shiftKey",
+                        "force": True
+                    }
+                ]
+            },
+            {
+                "name": "clicked", "value": None,
+                "on": [
+                    {
+                        "events": "@legendSymbol:click, @legendLabel:click",
+                        "update": "{value: datum.value}",
+                        "force": True
+                    }
+                ]
+            },
         ],
         "marks": [
             {
@@ -153,13 +181,42 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
         ],
         "legends": [
             {
-                "fill": color_scale_name,
-                "title": FIELD_CATEGORY_NAME,
-                "type": "symbol",
-                "symbolStrokeColor": "#4682b4",
-                "symbolStrokeWidth": 2,
-                "symbolOpacity": 0.5,
-                "symbolType": "circle"
+                # "fill": color_scale_name,
+                # "title": FIELD_CATEGORY_NAME,
+                # "type": "symbol",
+                # "symbolStrokeColor": "#4682b4",
+                # "symbolStrokeWidth": 2,
+                # "symbolOpacity": 0.5,
+                # "symbolType": "circle"
+                "stroke": "color",
+                "title": "Origin",
+                "encode": {
+                    "symbols": {
+                        "name": "legendSymbol",
+                        "interactive": True,
+                        "update": {
+                            "fill": {"value": "transparent"},
+                            "strokeWidth": {"value": 2},
+                            "opacity": [
+                                {"test": "!length(data('selected')) || indata('selected', 'value', datum.value)",
+                                 "value": 0.7},
+                                {"value": 0.15}
+                            ],
+                            "size": {"value": 64}
+                        }
+                    },
+                    "labels": {
+                        "name": "legendLabel",
+                        "interactive": True,
+                        "update": {
+                            "opacity": [
+                                {"test": "!length(data('selected')) || indata('selected', 'value', datum.value)",
+                                 "value": 1},
+                                {"value": 0.25}
+                            ]
+                        }
+                    }
+                }
             }
         ]
     }
