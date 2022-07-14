@@ -116,7 +116,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                 "name": tooltip_signal_name,
                 "value": {},
                 "on": [
-                    {"events": "symbol:mous eover", "update": "datum"},
+                    {"events": "symbol:mouseover", "update": "datum"},
                     {"events": "symbol:mouseout", "update": "{}"}
                 ]
             },
