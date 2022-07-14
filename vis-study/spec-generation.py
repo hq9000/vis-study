@@ -153,7 +153,12 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
 
                         "shape": {"value": "circle"},
                         "strokeWidth": {"value": 2},
-                        "opacity": {"value": 0.5},
+                        "opacity": [
+                            {
+                                "test": f"(indata('selected', 'value', datum.{FIELD_CATEGORY_NAME}))",
+                                "value": 0.7},
+                            {"value": 0.15}
+                        ],
                         "stroke": {"value": "#FF0000", "scale": color_scale_name, "field": FIELD_CATEGORY_NAME},
                         "fill": {"value": "transparent"}
                     }
