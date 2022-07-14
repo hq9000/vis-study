@@ -44,11 +44,18 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
     Generate report vega specification, without data
     """
 
-    data_name = "table"
+    source_data_name = "table"
+    selected_data_name = "selected"
+
     x_scale_name = "xscale"
     y_scale_name = "yscale"
     color_scale_name = "color"
+
     tooltip_signal_name = "tooltip"
+    clicked_signal_name = "clicked"
+    shift_signal_name = "shift"
+    shift_signal_name = "shift"
+
     tooltip_derived_text_field_name = "tooltip_text"
 
     def generate_tooltip_text_expression(request: GenerationRequest) -> str:
@@ -66,7 +73,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
         "padding": 5,
         "data": [
             {
-                "name": data_name,
+                "name": source_data_name,
                 "url": generate_relative_path_to_data(request),
                 "format": {"type": request.data_format.value, "parse": "auto"},
                 "transform": [
@@ -78,10 +85,11 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                 ]
             },
             {
-                "name": "selected",
+                "name": selected_data_name,
                 "on": [
-                    {"trigger": "!shift && clicked", "insert": "clicked"},
-                    {"trigger": "shift && clicked", "toggle": "clicked"}
+                    {"trigger": "!shift", "remove": True},
+                    {"trigger": f"!shift && {clicked_signal_name}", "insert": clicked_signal_name},
+                    {"trigger": f"{shift_signal_name} && {clicked_signal_name}", "toggle": clicked_signal_name}
                 ]
             }
         ],
@@ -89,14 +97,14 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
             {
                 "name": x_scale_name,
                 "type": "linear",
-                "domain": {"data": data_name, "field": FIELD_X_NAME},
+                "domain": {"data": source_data_name, "field": FIELD_X_NAME},
                 "range": "width",
                 "padding": 0.05,
             },
             {
                 "name": y_scale_name,
                 "type": "linear",
-                "domain": {"data": data_name, "field": FIELD_Y_NAME},
+                "domain": {"data": source_data_name, "field": FIELD_Y_NAME},
                 "nice": True,
                 "range": "height"
             },
@@ -104,7 +112,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                 "name": color_scale_name,
                 "type": "ordinal",
                 "range": {"scheme": "category10"},
-                "domain": {"data": data_name, "field": FIELD_CATEGORY_NAME}
+                "domain": {"data": source_data_name, "field": FIELD_CATEGORY_NAME}
             }
         ],
         "axes": [
@@ -131,7 +139,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                 ]
             },
             {
-                "name": "clicked", "value": None,
+                "name": clicked_signal_name, "value": None,
                 "on": [
                     {
                         "events": "@legendSymbol:click, @legendLabel:click",
@@ -145,7 +153,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
             {
                 "name": "marks",
                 "type": "symbol",
-                "from": {"data": data_name},
+                "from": {"data": source_data_name},
                 "encode": {
                     "update": {
                         "x": {"scale": x_scale_name, "field": FIELD_X_NAME},
@@ -155,7 +163,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                         "strokeWidth": {"value": 2},
                         "opacity": [
                             {
-                                "test": f"(indata('selected', 'value', datum.{FIELD_CATEGORY_NAME}))",
+                                "test": f"!length(data('{selected_data_name}')) || (indata('{selected_data_name}', 'value', datum.{FIELD_CATEGORY_NAME}))",
                                 "value": 0.7},
                             {"value": 0.15}
                         ],
@@ -186,13 +194,6 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
         ],
         "legends": [
             {
-                # "fill": color_scale_name,
-                # "title": FIELD_CATEGORY_NAME,
-                # "type": "symbol",
-                # "symbolStrokeColor": "#4682b4",
-                # "symbolStrokeWidth": 2,
-                # "symbolOpacity": 0.5,
-                # "symbolType": "circle"
                 "stroke": "color",
                 "title": "Origin",
                 "encode": {
@@ -203,7 +204,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                             "fill": {"value": "transparent"},
                             "strokeWidth": {"value": 2},
                             "opacity": [
-                                {"test": "!length(data('selected')) || indata('selected', 'value', datum.value)",
+                                {"test": f"!length(data('{selected_data_name}')) || indata('{selected_data_name}', 'value', datum.value)",
                                  "value": 0.7},
                                 {"value": 0.15}
                             ],
@@ -215,7 +216,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                         "interactive": True,
                         "update": {
                             "opacity": [
-                                {"test": "!length(data('selected')) || indata('selected', 'value', datum.value)",
+                                {"test": f"!length(data('{selected_data_name}')) || indata('{selected_data_name}', 'value', datum.value)",
                                  "value": 1},
                                 {"value": 0.25}
                             ]
