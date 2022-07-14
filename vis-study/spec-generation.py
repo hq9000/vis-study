@@ -177,7 +177,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                             {"value": 0.15}
                         ],
                         "stroke": {"value": "#FF0000", "scale": color_scale_name, "field": FIELD_CATEGORY_NAME},
-                        "fill": {"value": "transparent"}
+                        "fill": {"value": "transparent", "scale": color_scale_name, "field": FIELD_CATEGORY_NAME}
                     }
                 },
             },
@@ -213,8 +213,9 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                             "fill": {"value": "transparent"},
                             "strokeWidth": {"value": 2},
                             "opacity": [
-                                {"test": f"!length(data('{selected_data_name}')) || indata('{selected_data_name}', 'value', datum.value)",
-                                 "value": 0.7},
+                                {
+                                    "test": f"!length(data('{selected_data_name}')) || indata('{selected_data_name}', 'value', datum.value)",
+                                    "value": 0.7},
                                 {"value": 0.15}
                             ],
                             "size": {"value": 64}
@@ -225,8 +226,9 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
                         "interactive": True,
                         "update": {
                             "opacity": [
-                                {"test": f"!length(data('{selected_data_name}')) || indata('{selected_data_name}', 'value', datum.value)",
-                                 "value": 1},
+                                {
+                                    "test": f"!length(data('{selected_data_name}')) || indata('{selected_data_name}', 'value', datum.value)",
+                                    "value": 1},
                                 {"value": 0.25}
                             ]
                         }
