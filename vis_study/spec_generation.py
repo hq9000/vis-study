@@ -1,10 +1,13 @@
 import csv
+import glob
+import os
 import random
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Dict, Generator, List
 import json
+import jsons
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
@@ -55,7 +58,6 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
     tooltip_signal_name = "tooltip"
     clicked_signal_name = "clicked"
     shift_signal_name = "shift"
-    shift_signal_name = "shift"
 
     tooltip_derived_text_field_name = "tooltip_text"
 
@@ -77,7 +79,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
         "data": [
             {
                 "name": source_data_name,
-                "url": generate_relative_path_to_data(request),
+                "url": generate_relative_path_to_data_file(request),
                 "format": {"type": request.data_format.value, "parse": "auto"},
                 "transform": [
                     {
@@ -244,7 +246,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
 def save_vega_spec(request: GenerationRequest, vega_spec: Dict):
     json_string = json.dumps(vega_spec, indent=2)
 
-    path = Path(__file__).parent.resolve() / '..' / GENERATED_DIR_NAME / generate_relative_path_to_spec(request)
+    path = Path(__file__).parent.resolve() / '..' / GENERATED_DIR_NAME / generate_relative_path_to_spec_file(request)
     with open(path, "w") as file:
         file.write(json_string)
 
@@ -274,15 +276,16 @@ def generate_data(request: GenerationRequest) -> None:
     out_file_name = (Path(__file__).parent.resolve()
                      / '..'
                      / GENERATED_DIR_NAME
-                     / generate_relative_path_to_data(request))
+                     / generate_relative_path_to_data_file(request))
 
     if request.data_format == DataFormat.CSV:
         with open(out_file_name, "w") as f:
             writer = csv.writer(f)
             writer.writerow(generate_csv_header_row(request))
 
-        for row in generate_rows(request):
-            writer.writerow(row)
+            for row in generate_rows(request):
+                writer.writerow(row.values())
+
     elif request.data_format == DataFormat.JSON:
         rows = list(generate_rows(request))
         with open(out_file_name, "w") as f:
@@ -293,28 +296,35 @@ def generate_data(request: GenerationRequest) -> None:
 
 def generate_html(request: GenerationRequest) -> str:
     env = Environment(
-        loader=PackageLoader('vis-study'),
+        loader=PackageLoader('vis_study'),
         autoescape=select_autoescape()
     )
 
     template = env.get_template('index.html')
+
+    request_dict = jsons.dump(request)
     return template.render(
-        request=request,
-        path_to_data=generate_relative_path_to_data(request),
-        path_to_spec=generate_relative_path_to_spec(request)
+        request_object=request,
+        request_dict=request_dict,
+        path_to_data=generate_relative_path_to_data_file(request),
+        path_to_spec=generate_relative_path_to_spec_file(request)
     )
 
 
+def generate_slug(request: GenerationRequest) -> str:
+    return f"points:{request.num_points}_format:{request.data_format.value}_categories:{request.num_categories}_renderer:{request.renderer.value}__{request.experiment_name}"
+
+
 def generate_relative_path_to_html(request: GenerationRequest) -> str:
-    return request.experiment_name + ".html"
+    return generate_slug(request) + ".html"
 
 
-def generate_relative_path_to_data(request: GenerationRequest) -> str:
-    return DATA_DIR_NAME + "/" + request.experiment_name + '_data.json'
+def generate_relative_path_to_data_file(request: GenerationRequest) -> str:
+    return DATA_DIR_NAME + "/" + generate_slug(request) + '_data.' + request.data_format.value
 
 
-def generate_relative_path_to_spec(request: GenerationRequest) -> str:
-    return SPECS_DIR_NAME + "/" + request.experiment_name + '_spec.json'
+def generate_relative_path_to_spec_file(request: GenerationRequest) -> str:
+    return SPECS_DIR_NAME + "/" + generate_slug(request) + '_spec.json'
 
 
 def save_html(request: GenerationRequest, html: str) -> None:
@@ -323,7 +333,7 @@ def save_html(request: GenerationRequest, html: str) -> None:
         file.write(html)
 
 
-def generate_all(request: GenerationRequest) -> None:
+def generate(request: GenerationRequest) -> None:
     generate_data(request)
 
     vega_spec = generate_vega_spec(request)
@@ -333,16 +343,16 @@ def generate_all(request: GenerationRequest) -> None:
     save_html(request, html)
 
 
-if __name__ == "__main__":
-    request = GenerationRequest(
-        experiment_name="exp1",
-        num_points=100,
-        num_categories=14,
-        width=500,
-        height=500,
-        data_format=DataFormat.JSON,
-        num_attributes=5,
-        renderer=Renderer.CANVAS
-    )
+def _remove_all_files_by_mask(mask: str) -> None:
+    fileList = glob.glob(mask)
+    for filePath in fileList:
+        os.remove(filePath)
 
-    generate_all(request)
+
+def remove_all_generated_files() -> None:
+    generated_files_dir = Path(__file__).parent.resolve() / '..' / GENERATED_DIR_NAME
+
+    _remove_all_files_by_mask(f'{generated_files_dir}/{DATA_DIR_NAME}/*.{DataFormat.JSON.value}')
+    _remove_all_files_by_mask(f'{generated_files_dir}/{DATA_DIR_NAME}/*.{DataFormat.CSV.value}')
+    _remove_all_files_by_mask(f'{generated_files_dir}/{SPECS_DIR_NAME}/*.json')
+    _remove_all_files_by_mask(f'{generated_files_dir}/*.html')

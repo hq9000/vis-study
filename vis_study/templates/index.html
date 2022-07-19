@@ -2,7 +2,15 @@
     <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
 </head>
 <body>
-<h1>{{ request.experiment_name }}</h1>
+<h1>{{ request_object.name }}</h1>
+<table>
+    {% for key, value in request_dict.items() %}
+        <tr>
+            <td>{{ key }}</td>
+            <td>{{ value }}</td>
+        </tr>
+    {% endfor %}
+</table>
 <div id="view"></div>
 <script type="text/javascript">
     var view;
@@ -14,7 +22,7 @@
 
     function render(spec) {
         view = new vega.View(vega.parse(spec), {
-            renderer: '{{ request.renderer.value }}',  // renderer (canvas or svg)
+            renderer: '{{ request_object.renderer.value }}',  // renderer (canvas or svg)
             container: '#view',   // parent DOM container
             hover: true       // enable hover processing
         });

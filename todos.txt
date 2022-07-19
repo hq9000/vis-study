@@ -1,1 +1,0 @@
-- circles with varying radius (attr_0)
