@@ -4,6 +4,7 @@ import os
 import random
 from dataclasses import dataclass
 from enum import Enum
+from os.path import exists
 from pathlib import Path
 from typing import Dict, Generator, List
 import json
@@ -42,7 +43,7 @@ class GenerationRequest(object):
     renderer: Renderer
 
 
-def generate_vega_spec(request: GenerationRequest) -> Dict:
+def _generate_vega_spec(request: GenerationRequest) -> Dict:
     """
     Generate report vega specification, without data
     """
@@ -79,7 +80,7 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
         "data": [
             {
                 "name": source_data_name,
-                "url": generate_relative_path_to_data_file(request),
+                "url": _generate_relative_path_to_data_file(request),
                 "format": {"type": request.data_format.value, "parse": "auto"},
                 "transform": [
                     {
@@ -243,15 +244,15 @@ def generate_vega_spec(request: GenerationRequest) -> Dict:
     return res
 
 
-def save_vega_spec(request: GenerationRequest, vega_spec: Dict):
+def _save_vega_spec(request: GenerationRequest, vega_spec: Dict):
     json_string = json.dumps(vega_spec, indent=2)
 
-    path = Path(__file__).parent.resolve() / '..' / GENERATED_DIR_NAME / generate_relative_path_to_spec_file(request)
+    path = Path(__file__).parent.resolve() / '..' / GENERATED_DIR_NAME / _generate_relative_path_to_spec_file(request)
     with open(path, "w") as file:
         file.write(json_string)
 
 
-def generate_data(request: GenerationRequest) -> None:
+def _generate_data(request: GenerationRequest) -> None:
     # noinspection PyUnusedLocal
     def generate_one_row(request: GenerationRequest, i: int) -> Dict:
 
@@ -276,7 +277,7 @@ def generate_data(request: GenerationRequest) -> None:
     out_file_name = (Path(__file__).parent.resolve()
                      / '..'
                      / GENERATED_DIR_NAME
-                     / generate_relative_path_to_data_file(request))
+                     / _generate_relative_path_to_data_file(request))
 
     if request.data_format == DataFormat.CSV:
         with open(out_file_name, "w") as f:
@@ -294,59 +295,56 @@ def generate_data(request: GenerationRequest) -> None:
         assert False, "unknown data format " + request.data_format.value
 
 
-def generate_html(request: GenerationRequest) -> str:
-    env = Environment(
+def _get_jinja_environment() -> Environment:
+    return Environment(
         loader=PackageLoader('vis_study'),
         autoescape=select_autoescape()
     )
 
-    template = env.get_template('index.html')
+
+def _generate_chart_html(request: GenerationRequest) -> str:
+    env = _get_jinja_environment()
+
+    template = env.get_template('chart.html')
 
     request_dict = jsons.dump(request)
     return template.render(
         request_object=request,
         request_dict=request_dict,
-        path_to_data=generate_relative_path_to_data_file(request),
-        path_to_spec=generate_relative_path_to_spec_file(request)
+        path_to_data=_generate_relative_path_to_data_file(request),
+        path_to_spec=_generate_relative_path_to_spec_file(request)
     )
 
 
-def generate_slug(request: GenerationRequest) -> str:
-    return f"points:{request.num_points}_format:{request.data_format.value}_categories:{request.num_categories}_renderer:{request.renderer.value}__{request.experiment_name}"
+def _generate_slug(request: GenerationRequest) -> str:
+    return f"{request.experiment_name}_points-{request.num_points}_format-{request.data_format.value}_categories-{request.num_categories}_attributes-{request.num_attributes}_renderer-{request.renderer.value}"
 
 
-def generate_relative_path_to_html(request: GenerationRequest) -> str:
-    return generate_slug(request) + ".html"
+def _generate_relative_path_to_html(request: GenerationRequest) -> str:
+    return _generate_slug(request) + ".html"
 
 
-def generate_relative_path_to_data_file(request: GenerationRequest) -> str:
-    return DATA_DIR_NAME + "/" + generate_slug(request) + '_data.' + request.data_format.value
+def _generate_relative_path_to_data_file(request: GenerationRequest) -> str:
+    return DATA_DIR_NAME + "/" + _generate_slug(request) + '_data.' + request.data_format.value
 
 
-def generate_relative_path_to_spec_file(request: GenerationRequest) -> str:
-    return SPECS_DIR_NAME + "/" + generate_slug(request) + '_spec.json'
+def _generate_relative_path_to_spec_file(request: GenerationRequest) -> str:
+    return SPECS_DIR_NAME + "/" + _generate_slug(request) + '_spec.json'
 
 
-def save_html(request: GenerationRequest, html: str) -> None:
-    path = Path(__file__).parent.resolve() / '..' / GENERATED_DIR_NAME / generate_relative_path_to_html(request)
+def _save_chart_html(request: GenerationRequest, html: str) -> None:
+    path = Path(__file__).parent.resolve() / '..' / GENERATED_DIR_NAME / _generate_relative_path_to_html(request)
+
+    assert exists(path) is False
+
     with open(path, "w") as file:
         file.write(html)
 
 
-def generate(request: GenerationRequest) -> None:
-    generate_data(request)
-
-    vega_spec = generate_vega_spec(request)
-    save_vega_spec(request, vega_spec)
-
-    html = generate_html(request)
-    save_html(request, html)
-
-
 def _remove_all_files_by_mask(mask: str) -> None:
-    fileList = glob.glob(mask)
-    for filePath in fileList:
-        os.remove(filePath)
+    file_list = glob.glob(mask)
+    for file_path in file_list:
+        os.remove(file_path)
 
 
 def remove_all_generated_files() -> None:
@@ -356,3 +354,31 @@ def remove_all_generated_files() -> None:
     _remove_all_files_by_mask(f'{generated_files_dir}/{DATA_DIR_NAME}/*.{DataFormat.CSV.value}')
     _remove_all_files_by_mask(f'{generated_files_dir}/{SPECS_DIR_NAME}/*.json')
     _remove_all_files_by_mask(f'{generated_files_dir}/*.html')
+
+
+def generate_chart(request: GenerationRequest) -> None:
+    _generate_data(request)
+
+    vega_spec = _generate_vega_spec(request)
+    _save_vega_spec(request, vega_spec)
+
+    html = _generate_chart_html(request)
+    _save_chart_html(request, html)
+
+
+def generate_index() -> None:
+    env = _get_jinja_environment()
+    template = env.get_template('index.html')
+
+    mask = str(Path(__file__).parent.resolve() / '..' / GENERATED_DIR_NAME / "*.html")
+
+    file_paths = glob.glob(mask)
+    file_paths = sorted([Path(path).name for path in file_paths])
+
+    html = template.render(file_paths=file_paths)
+
+    path = Path(__file__).parent.resolve() / '..' / GENERATED_DIR_NAME / 'index.html'
+    assert exists(path) is False
+
+    with open(path, "w") as file:
+        file.write(html)
