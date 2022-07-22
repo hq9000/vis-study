@@ -33,6 +33,10 @@ class Renderer(Enum):
 
 @dataclass
 class GenerationRequest(object):
+    """Class to express the request to generate one chart
+
+    This DTO defines precisely what will be generated.
+    """
     experiment_name: str
     num_points: int
     num_categories: int
@@ -44,9 +48,7 @@ class GenerationRequest(object):
 
 
 def _generate_vega_spec(request: GenerationRequest) -> Dict:
-    """
-    Generate report vega specification, without data
-    """
+    """Generate report vega specification, without data"""
 
     source_data_name = "table"
     selected_data_name = "selected"
@@ -245,6 +247,7 @@ def _generate_vega_spec(request: GenerationRequest) -> Dict:
 
 
 def _save_vega_spec(request: GenerationRequest, vega_spec: Dict):
+    """Save already generated Vega spec as json"""
     json_string = json.dumps(vega_spec, indent=2)
 
     path = Path(__file__).parent.resolve() / '..' / GENERATED_DIR_NAME / _generate_relative_path_to_spec_file(request)
@@ -252,7 +255,8 @@ def _save_vega_spec(request: GenerationRequest, vega_spec: Dict):
         file.write(json_string)
 
 
-def _generate_data(request: GenerationRequest) -> None:
+def _generate_and_save_data(request: GenerationRequest) -> None:
+    """Generate and save data for one chart"""
     # noinspection PyUnusedLocal
     def generate_one_row(request: GenerationRequest, i: int) -> Dict:
 
@@ -296,6 +300,7 @@ def _generate_data(request: GenerationRequest) -> None:
 
 
 def _get_jinja_environment() -> Environment:
+    """Create and return a new Jinja environment"""
     return Environment(
         loader=PackageLoader('vis_study'),
         autoescape=select_autoescape()
@@ -303,6 +308,7 @@ def _get_jinja_environment() -> Environment:
 
 
 def _generate_chart_html(request: GenerationRequest) -> str:
+    """Generate ready html for one chart"""
     env = _get_jinja_environment()
 
     template = env.get_template('chart.html')
@@ -333,6 +339,12 @@ def _generate_relative_path_to_spec_file(request: GenerationRequest) -> str:
 
 
 def _save_chart_html(request: GenerationRequest, html: str) -> None:
+    """Save html of one chart
+
+    Args:
+        request: an original request for generation. Used to determine the name to save with.
+        html: a html ready to be saved
+    """
     path = Path(__file__).parent.resolve() / '..' / GENERATED_DIR_NAME / _generate_relative_path_to_html(request)
 
     assert exists(path) is False
@@ -342,12 +354,23 @@ def _save_chart_html(request: GenerationRequest, html: str) -> None:
 
 
 def _remove_all_files_by_mask(mask: str) -> None:
+    """Remove zero or more files by mask
+
+    Removes all the files satisfying a mask, for example
+    /foo/bar/*.json
+    """
     file_list = glob.glob(mask)
     for file_path in file_list:
         os.remove(file_path)
 
 
 def remove_all_generated_files() -> None:
+    """Remove everything previously generated
+
+    Removes all the files normally generated for a chart.
+    Intended to be called in the very beginning to give generation
+    a fresh start.
+    """
     generated_files_dir = Path(__file__).parent.resolve() / '..' / GENERATED_DIR_NAME
 
     _remove_all_files_by_mask(f'{generated_files_dir}/{DATA_DIR_NAME}/*.{DataFormat.JSON.value}')
@@ -357,7 +380,14 @@ def remove_all_generated_files() -> None:
 
 
 def generate_chart(request: GenerationRequest) -> None:
-    _generate_data(request)
+    """Generate one chart
+
+    This function is a most important entry point of this module.
+    Creates one "experiment" chart with properties specified in request.
+    Has a side effect of creating new files in the `generated` directory:
+    JSON vega specs, datafile in requested format and a html document.
+    """
+    _generate_and_save_data(request)
 
     vega_spec = _generate_vega_spec(request)
     _save_vega_spec(request, vega_spec)
@@ -367,6 +397,11 @@ def generate_chart(request: GenerationRequest) -> None:
 
 
 def generate_index() -> None:
+    """Generate index.html
+
+    Creates an index.html referencing all already generated
+    html files. Should therefore be called last
+    """
     env = _get_jinja_environment()
     template = env.get_template('index.html')
 
@@ -375,10 +410,11 @@ def generate_index() -> None:
     file_paths = glob.glob(mask)
     file_paths = sorted([Path(path).name for path in file_paths])
 
+    file_paths = [path for path in file_paths if path != 'index.html']
+
     html = template.render(file_paths=file_paths)
 
     path = Path(__file__).parent.resolve() / '..' / GENERATED_DIR_NAME / 'index.html'
-    assert exists(path) is False
 
     with open(path, "w") as file:
         file.write(html)
